@@ -40,6 +40,14 @@ export interface SearchResult {
   totalEpisodes: number | null
   overview: string
   score: number | null
+  genres: string[]
+}
+
+export function scoreColor(score: number | null): string {
+  if (score === null) return '#D4D4D8'
+  if (score >= 8) return '#1FAA59'
+  if (score >= 5) return '#F5A623'
+  return '#E14F4F'
 }
 
 export interface LibraryEntry {

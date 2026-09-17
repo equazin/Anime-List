@@ -12,6 +12,20 @@ export function hasTmdbKey(): boolean {
   return apiKey() !== null
 }
 
+// TMDB genre ids are fixed per kind — no extra request needed to label them.
+const MOVIE_GENRES: Record<number, string> = {
+  28: 'Acción', 12: 'Aventura', 16: 'Animación', 35: 'Comedia', 80: 'Crimen',
+  99: 'Documental', 18: 'Drama', 10751: 'Familiar', 14: 'Fantasía', 36: 'Historia',
+  27: 'Terror', 10402: 'Música', 9648: 'Misterio', 10749: 'Romance', 878: 'Ciencia ficción',
+  10770: 'Película de TV', 53: 'Suspenso', 10752: 'Bélica', 37: 'Western',
+}
+const TV_GENRES: Record<number, string> = {
+  10759: 'Acción y aventura', 16: 'Animación', 35: 'Comedia', 80: 'Crimen',
+  99: 'Documental', 18: 'Drama', 10751: 'Familiar', 10762: 'Infantil', 9648: 'Misterio',
+  10763: 'Noticias', 10764: 'Reality', 10765: 'Ciencia ficción y fantasía', 10766: 'Telenovela',
+  10767: 'Talk show', 10768: 'Bélica y política', 37: 'Western',
+}
+
 interface TmdbItem {
   id: number
   title?: string
@@ -22,10 +36,12 @@ interface TmdbItem {
   first_air_date?: string
   vote_average: number | null
   number_of_episodes?: number
+  genre_ids?: number[]
 }
 
 function toResult(item: TmdbItem, kind: MediaKind): SearchResult {
   const date = item.release_date ?? item.first_air_date ?? ''
+  const genreMap = kind === 'movie' ? MOVIE_GENRES : TV_GENRES
   return {
     kind,
     externalId: String(item.id),
@@ -35,6 +51,7 @@ function toResult(item: TmdbItem, kind: MediaKind): SearchResult {
     totalEpisodes: item.number_of_episodes ?? null,
     overview: item.overview ?? '',
     score: item.vote_average ?? null,
+    genres: (item.genre_ids ?? []).map((id) => genreMap[id]).filter((g): g is string => Boolean(g)),
   }
 }
 
@@ -65,4 +82,16 @@ export async function trendingMovies(): Promise<SearchResult[]> {
   if (!hasTmdbKey()) return []
   const json = await tmdbFetch('/trending/movie/week')
   return (json.results as TmdbItem[]).map((r) => toResult(r, 'movie'))
+}
+
+export async function browseMovies(): Promise<SearchResult[]> {
+  if (!hasTmdbKey()) return []
+  const json = await tmdbFetch('/movie/popular')
+  return (json.results as TmdbItem[]).map((r) => toResult(r, 'movie'))
+}
+
+export async function browseTv(): Promise<SearchResult[]> {
+  if (!hasTmdbKey()) return []
+  const json = await tmdbFetch('/tv/popular')
+  return (json.results as TmdbItem[]).map((r) => toResult(r, 'tv'))
 }

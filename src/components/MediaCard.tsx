@@ -35,6 +35,9 @@ export function MediaCard({ item }: { item: SearchResult }) {
       <div className="flex flex-1 flex-col gap-1 p-2.5">
         <p className="line-clamp-2 text-sm font-semibold text-neutral-900">{item.title}</p>
         <p className="text-xs text-neutral-400">{item.year ?? 'Año desconocido'}</p>
+        {item.genres.length > 0 && (
+          <p className="line-clamp-1 text-[11px] text-neutral-400">{item.genres.slice(0, 2).join(' · ')}</p>
+        )}
       </div>
     </button>
   )

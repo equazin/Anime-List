@@ -11,6 +11,7 @@ interface JikanAnime {
   synopsis: string | null
   year: number | null
   aired: { prop: { from: { year: number | null } } }
+  genres: { name: string }[]
 }
 
 function toResult(a: JikanAnime): SearchResult {
@@ -23,6 +24,7 @@ function toResult(a: JikanAnime): SearchResult {
     totalEpisodes: a.episodes ?? null,
     overview: a.synopsis ?? '',
     score: a.score ?? null,
+    genres: (a.genres ?? []).map((g) => g.name),
   }
 }
 
@@ -47,6 +49,13 @@ export async function searchAnime(query: string): Promise<SearchResult[]> {
 
 export async function topAnime(): Promise<SearchResult[]> {
   const res = await throttledFetch(`${BASE}/top/anime?filter=airing&limit=12`)
+  if (!res.ok) throw new Error(`Jikan error: ${res.status}`)
+  const json = await res.json()
+  return (json.data as JikanAnime[]).map(toResult)
+}
+
+export async function browseAnime(): Promise<SearchResult[]> {
+  const res = await throttledFetch(`${BASE}/top/anime?limit=24`)
   if (!res.ok) throw new Error(`Jikan error: ${res.status}`)
   const json = await res.json()
   return (json.data as JikanAnime[]).map(toResult)

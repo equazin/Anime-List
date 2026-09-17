@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { searchAnime } from '../lib/jikan'
-import { searchMovies, searchTv, hasTmdbKey } from '../lib/tmdb'
+import { useEffect, useMemo, useState } from 'react'
+import { browseAnime, searchAnime } from '../lib/jikan'
+import { browseMovies, browseTv, searchMovies, searchTv, hasTmdbKey } from '../lib/tmdb'
 import { MediaCard } from '../components/MediaCard'
 import type { MediaKind, SearchResult } from '../lib/types'
 
@@ -16,13 +16,41 @@ const FILTER_LABEL: Record<Filter, string> = {
 export function Search() {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
+  const [genre, setGenre] = useState<string | null>(null)
   const [results, setResults] = useState<SearchResult[]>([])
-  const [loading, setLoading] = useState(false)
+  const [mode, setMode] = useState<'browse' | 'search'>('browse')
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadBrowse()
+  }, [])
+
+  async function loadBrowse() {
+    setMode('browse')
+    setLoading(true)
+    setError(null)
+    const [animeRes, movieRes, tvRes] = await Promise.allSettled([
+      browseAnime(),
+      browseMovies(),
+      browseTv(),
+    ])
+    const combined: SearchResult[] = []
+    if (animeRes.status === 'fulfilled') combined.push(...animeRes.value)
+    if (movieRes.status === 'fulfilled') combined.push(...movieRes.value)
+    if (tvRes.status === 'fulfilled') combined.push(...tvRes.value)
+    setResults(combined)
+    setGenre(null)
+    setLoading(false)
+  }
 
   async function runSearch(e: React.FormEvent) {
     e.preventDefault()
-    if (!query.trim()) return
+    if (!query.trim()) {
+      loadBrowse()
+      return
+    }
+    setMode('search')
     setLoading(true)
     setError(null)
     try {
@@ -36,6 +64,7 @@ export function Search() {
       if (movieRes.status === 'fulfilled') combined.push(...movieRes.value)
       if (tvRes.status === 'fulfilled') combined.push(...tvRes.value)
       setResults(combined)
+      setGenre(null)
       if (combined.length === 0) setError('Sin resultados.')
     } catch {
       setError('Ocurrió un error al buscar. Intenta de nuevo.')
@@ -44,7 +73,15 @@ export function Search() {
     }
   }
 
-  const filtered = filter === 'all' ? results : results.filter((r) => r.kind === filter)
+  const byKind = filter === 'all' ? results : results.filter((r) => r.kind === filter)
+
+  const genres = useMemo(() => {
+    const set = new Set<string>()
+    byKind.forEach((r) => r.genres.forEach((g) => set.add(g)))
+    return Array.from(set).sort().slice(0, 14)
+  }, [byKind])
+
+  const filtered = genre ? byKind.filter((r) => r.genres.includes(genre)) : byKind
 
   return (
     <div className="flex flex-col gap-5">
@@ -71,12 +108,12 @@ export function Search() {
 
       {!hasTmdbKey() && (
         <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-700">
-          Sin <code>VITE_TMDB_API_KEY</code> configurada: solo se buscará en la base de
+          Sin <code>VITE_TMDB_API_KEY</code> configurada: solo se muestran datos de
           MyAnimeList.
         </p>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {(['all', 'anime', 'movie', 'tv'] as Filter[]).map((f) => (
           <button
             key={f}
@@ -90,9 +127,40 @@ export function Search() {
             {FILTER_LABEL[f]}
           </button>
         ))}
+        {mode === 'browse' && (
+          <span className="ml-1 text-xs text-neutral-400">Explorando lo más popular</span>
+        )}
       </div>
 
-      {loading && <p className="text-sm text-neutral-400">Buscando…</p>}
+      {genres.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setGenre(null)}
+            className={`rounded-full border px-3 py-1 text-xs font-medium ${
+              genre === null
+                ? 'border-[#2F6FED] text-[#2F6FED]'
+                : 'border-neutral-200 text-neutral-500 hover:border-neutral-400'
+            }`}
+          >
+            Todas las categorías
+          </button>
+          {genres.map((g) => (
+            <button
+              key={g}
+              onClick={() => setGenre(g)}
+              className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                genre === g
+                  ? 'border-[#2F6FED] text-[#2F6FED]'
+                  : 'border-neutral-200 text-neutral-500 hover:border-neutral-400'
+              }`}
+            >
+              {g}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {loading && <p className="text-sm text-neutral-400">Cargando…</p>}
       {error && !loading && <p className="text-sm text-neutral-400">{error}</p>}
 
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">

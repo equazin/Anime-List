@@ -2,7 +2,14 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLibrary } from '../store/library'
 import { useAddModal } from '../store/modal'
-import { STATUS_COLOR, STATUS_LABEL, STATUS_ORDER, type MediaKind, type WatchStatus } from '../lib/types'
+import {
+  STATUS_COLOR,
+  STATUS_LABEL,
+  STATUS_ORDER,
+  scoreColor,
+  type MediaKind,
+  type WatchStatus,
+} from '../lib/types'
 
 const KIND_LABEL: Record<MediaKind, string> = {
   anime: 'Anime',
@@ -60,67 +67,76 @@ export function Library() {
           para agregar animes, películas o series.
         </p>
       ) : (
-        <div className="overflow-x-auto border border-neutral-200 bg-white">
-          <table className="w-full text-sm">
-            <thead className="border-b border-neutral-200 text-left text-neutral-400">
-              <tr>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Título</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Tipo</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Estado</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Progreso</th>
-                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide">Puntaje</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((entry) => (
-                <tr
-                  key={entry.id}
-                  onClick={() =>
-                    openModal({
-                      kind: entry.kind,
-                      externalId: entry.externalId,
-                      title: entry.title,
-                      imageUrl: entry.imageUrl,
-                      totalEpisodes: entry.totalEpisodes,
-                      year: null,
-                      overview: '',
-                      score: null,
-                    })
-                  }
-                  className="cursor-pointer border-t border-neutral-100 hover:bg-neutral-50"
+        <div className="flex flex-col gap-2.5">
+          {list.map((entry) => {
+            const pct = entry.totalEpisodes ? Math.min(100, (entry.progress / entry.totalEpisodes) * 100) : 0
+            return (
+              <div
+                key={entry.id}
+                onClick={() =>
+                  openModal({
+                    kind: entry.kind,
+                    externalId: entry.externalId,
+                    title: entry.title,
+                    imageUrl: entry.imageUrl,
+                    totalEpisodes: entry.totalEpisodes,
+                    year: null,
+                    overview: '',
+                    score: null,
+                    genres: [],
+                  })
+                }
+                className="flex cursor-pointer items-center gap-4 border border-neutral-200 bg-white p-3.5 transition hover:border-neutral-300 hover:shadow-sm"
+              >
+                <div className="h-[68px] w-[48px] flex-shrink-0 overflow-hidden rounded bg-neutral-100">
+                  {entry.imageUrl ? (
+                    <img src={entry.imageUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-lg font-black text-neutral-300">
+                      {entry.title[0]}
+                    </div>
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-grow">
+                  <p className="truncate text-[15px] font-semibold text-neutral-900">{entry.title}</p>
+                  <p className="text-xs text-neutral-400">{KIND_LABEL[entry.kind]}</p>
+                </div>
+
+                <span
+                  className="hidden flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold sm:inline-block"
+                  style={{ background: `${STATUS_COLOR[entry.status]}1A`, color: STATUS_COLOR[entry.status] }}
                 >
-                  <td className="flex items-center gap-2.5 px-4 py-2.5 font-semibold text-neutral-900">
-                    {entry.imageUrl && (
-                      <img src={entry.imageUrl} alt="" className="h-10 w-7 rounded object-cover" />
-                    )}
-                    {entry.title}
-                  </td>
-                  <td className="px-4 py-2.5 text-neutral-400">{KIND_LABEL[entry.kind]}</td>
-                  <td className="px-4 py-2.5">
-                    <span
-                      className="rounded-full px-2.5 py-1 text-xs font-semibold"
-                      style={{ background: `${STATUS_COLOR[entry.status]}1A`, color: STATUS_COLOR[entry.status] }}
-                    >
-                      {STATUS_LABEL[entry.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-neutral-400">
+                  {STATUS_LABEL[entry.status]}
+                </span>
+
+                <div className="hidden w-40 flex-shrink-0 flex-col gap-1 md:flex">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-neutral-100">
+                    <div
+                      className="h-full rounded-full bg-neutral-900"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="text-[11px] text-neutral-400">
                     {entry.progress}
-                    {entry.totalEpisodes ? ` / ${entry.totalEpisodes}` : ''}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {entry.score !== null ? (
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-900 text-xs font-bold text-white">
-                        {entry.score}
-                      </span>
-                    ) : (
-                      <span className="text-neutral-300">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    {entry.totalEpisodes ? ` / ${entry.totalEpisodes} episodios` : ' episodios'}
+                  </span>
+                </div>
+
+                <div className="flex flex-shrink-0 flex-col items-center gap-0.5">
+                  <span
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-base font-bold text-white"
+                    style={{ background: scoreColor(entry.score) }}
+                  >
+                    {entry.score ?? '—'}
+                  </span>
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-neutral-400">
+                    puntaje
+                  </span>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
