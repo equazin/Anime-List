@@ -26,6 +26,13 @@ export function Search() {
     loadBrowse()
   }, [])
 
+  function describeFailure(animeFailed: boolean, otherFailed: boolean): string | null {
+    if (animeFailed && otherFailed) return 'MyAnimeList y TMDB no están respondiendo ahora mismo.'
+    if (animeFailed) return 'MyAnimeList (Jikan) no está respondiendo ahora mismo — puede ser una caída temporal del servicio.'
+    if (otherFailed) return 'TMDB no está respondiendo ahora mismo.'
+    return null
+  }
+
   async function loadBrowse() {
     setMode('browse')
     setLoading(true)
@@ -41,11 +48,16 @@ export function Search() {
     if (tvRes.status === 'fulfilled') combined.push(...tvRes.value)
     setResults(combined)
     setGenre(null)
+    setError(describeFailure(animeRes.status === 'rejected', movieRes.status === 'rejected' || tvRes.status === 'rejected'))
     setLoading(false)
   }
 
-  async function runSearch(e: React.FormEvent) {
+  function runSearch(e: React.FormEvent) {
     e.preventDefault()
+    performSearch()
+  }
+
+  async function performSearch() {
     if (!query.trim()) {
       loadBrowse()
       return
@@ -53,24 +65,24 @@ export function Search() {
     setMode('search')
     setLoading(true)
     setError(null)
-    try {
-      const [animeRes, movieRes, tvRes] = await Promise.allSettled([
-        searchAnime(query),
-        searchMovies(query),
-        searchTv(query),
-      ])
-      const combined: SearchResult[] = []
-      if (animeRes.status === 'fulfilled') combined.push(...animeRes.value)
-      if (movieRes.status === 'fulfilled') combined.push(...movieRes.value)
-      if (tvRes.status === 'fulfilled') combined.push(...tvRes.value)
-      setResults(combined)
-      setGenre(null)
-      if (combined.length === 0) setError('Sin resultados.')
-    } catch {
-      setError('Ocurrió un error al buscar. Intenta de nuevo.')
-    } finally {
-      setLoading(false)
-    }
+    const [animeRes, movieRes, tvRes] = await Promise.allSettled([
+      searchAnime(query),
+      searchMovies(query),
+      searchTv(query),
+    ])
+    const combined: SearchResult[] = []
+    if (animeRes.status === 'fulfilled') combined.push(...animeRes.value)
+    if (movieRes.status === 'fulfilled') combined.push(...movieRes.value)
+    if (tvRes.status === 'fulfilled') combined.push(...tvRes.value)
+    setResults(combined)
+    setGenre(null)
+    const failureMessage = describeFailure(
+      animeRes.status === 'rejected',
+      movieRes.status === 'rejected' || tvRes.status === 'rejected'
+    )
+    if (failureMessage) setError(failureMessage)
+    else if (combined.length === 0) setError('Sin resultados.')
+    setLoading(false)
   }
 
   const byKind = filter === 'all' ? results : results.filter((r) => r.kind === filter)
@@ -127,7 +139,7 @@ export function Search() {
             {FILTER_LABEL[f]}
           </button>
         ))}
-        {mode === 'browse' && (
+        {mode === 'browse' && !loading && !error && (
           <span className="ml-1 text-xs text-neutral-400">Explorando lo más popular</span>
         )}
       </div>
@@ -161,7 +173,18 @@ export function Search() {
       )}
 
       {loading && <p className="text-sm text-neutral-400">Cargando…</p>}
-      {error && !loading && <p className="text-sm text-neutral-400">{error}</p>}
+
+      {error && !loading && (
+        <div className="flex items-center justify-between gap-3 rounded-md bg-red-50 p-3 text-sm text-red-700">
+          <span>{error}</span>
+          <button
+            onClick={mode === 'search' ? performSearch : loadBrowse}
+            className="flex-shrink-0 rounded-md bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
         {filtered.map((item) => (

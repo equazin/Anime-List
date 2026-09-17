@@ -55,15 +55,32 @@ function toResult(item: TmdbItem, kind: MediaKind): SearchResult {
   }
 }
 
-async function tmdbFetch(path: string) {
+async function tmdbFetch(path: string, retries = 2) {
   const key = apiKey()
   if (!key) throw new Error('Falta VITE_TMDB_API_KEY')
   const url = new URL(`${BASE}${path}`)
   url.searchParams.set('api_key', key)
   url.searchParams.set('language', 'es-ES')
-  const res = await fetch(url.toString())
-  if (!res.ok) throw new Error(`TMDB error: ${res.status}`)
-  return res.json()
+
+  let lastError: unknown
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url.toString())
+      if (res.ok) return res.json()
+      if (res.status >= 500 && attempt < retries) {
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)))
+        continue
+      }
+      throw new Error(`TMDB no responde (${res.status})`)
+    } catch (err) {
+      lastError = err
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)))
+        continue
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('TMDB no responde')
 }
 
 export async function searchMovies(query: string): Promise<SearchResult[]> {

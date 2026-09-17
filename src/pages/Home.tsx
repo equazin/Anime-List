@@ -10,14 +10,25 @@ export function Home() {
   const [anime, setAnime] = useState<SearchResult[]>([])
   const [movies, setMovies] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(true)
+  const [animeError, setAnimeError] = useState(false)
+  const [movieError, setMovieError] = useState(false)
   const entries = useLibrary((s) => s.entries)
 
-  useEffect(() => {
+  function load() {
+    setLoading(true)
+    setAnimeError(false)
+    setMovieError(false)
     Promise.allSettled([topAnime(), trendingMovies()]).then(([a, m]) => {
       if (a.status === 'fulfilled') setAnime(a.value)
+      else setAnimeError(true)
       if (m.status === 'fulfilled') setMovies(m.value)
+      else setMovieError(true)
       setLoading(false)
     })
+  }
+
+  useEffect(() => {
+    load()
   }, [])
 
   const values = Object.values(entries)
@@ -54,6 +65,16 @@ export function Home() {
         </div>
         {loading ? (
           <p className="text-sm text-neutral-400">Cargando…</p>
+        ) : animeError ? (
+          <div className="flex items-center justify-between gap-3 rounded-md bg-red-50 p-3 text-sm text-red-700">
+            <span>MyAnimeList (Jikan) no está respondiendo ahora mismo.</span>
+            <button
+              onClick={load}
+              className="flex-shrink-0 rounded-md bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
+            >
+              Reintentar
+            </button>
+          </div>
         ) : (
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
             {anime.map((item) => (
@@ -73,6 +94,16 @@ export function Home() {
             Configura <code>VITE_TMDB_API_KEY</code> en un archivo <code>.env</code> para
             ver películas y series (clave gratuita en themoviedb.org).
           </p>
+        ) : loading ? null : movieError ? (
+          <div className="flex items-center justify-between gap-3 rounded-md bg-red-50 p-3 text-sm text-red-700">
+            <span>TMDB no está respondiendo ahora mismo.</span>
+            <button
+              onClick={load}
+              className="flex-shrink-0 rounded-md bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
+            >
+              Reintentar
+            </button>
+          </div>
         ) : (
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
             {movies.map((item) => (
