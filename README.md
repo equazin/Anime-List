@@ -1,4 +1,4 @@
-# OtakuTrack
+# Anime List
 
 Tracker de anime, películas y series al estilo MyAnimeList: busca títulos,
 márcalos como viendo / pendiente / completado / en pausa / abandonado, anótales

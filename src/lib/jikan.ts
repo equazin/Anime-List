@@ -51,10 +51,3 @@ export async function topAnime(): Promise<SearchResult[]> {
   const json = await res.json()
   return (json.data as JikanAnime[]).map(toResult)
 }
-
-export async function getAnimeById(id: string): Promise<SearchResult> {
-  const res = await throttledFetch(`${BASE}/anime/${id}`)
-  if (!res.ok) throw new Error(`Jikan error: ${res.status}`)
-  const json = await res.json()
-  return toResult(json.data as JikanAnime)
-}

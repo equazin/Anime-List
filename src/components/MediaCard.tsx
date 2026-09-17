@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
 import type { SearchResult } from '../lib/types'
+import { useAddModal } from '../store/modal'
 
 const KIND_LABEL: Record<SearchResult['kind'], string> = {
   anime: 'Anime',
@@ -7,46 +7,35 @@ const KIND_LABEL: Record<SearchResult['kind'], string> = {
   tv: 'Serie',
 }
 
-const KIND_COLOR: Record<SearchResult['kind'], string> = {
-  anime: 'bg-fuchsia-500/20 text-fuchsia-300',
-  movie: 'bg-sky-500/20 text-sky-300',
-  tv: 'bg-amber-500/20 text-amber-300',
-}
-
 export function MediaCard({ item }: { item: SearchResult }) {
+  const open = useAddModal((s) => s.open)
+
   return (
-    <Link
-      to={`/title/${item.kind}/${item.externalId}`}
-      className="group flex flex-col overflow-hidden rounded-lg bg-neutral-900 ring-1 ring-neutral-800 transition hover:ring-fuchsia-500/60"
+    <button
+      onClick={() => open(item)}
+      className="flex flex-col overflow-hidden rounded-lg bg-white text-left ring-1 ring-neutral-200 transition hover:-translate-y-0.5 hover:shadow-md"
     >
-      <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-800">
+      <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-100">
         {item.imageUrl ? (
-          <img
-            src={item.imageUrl}
-            alt={item.title}
-            className="h-full w-full object-cover transition group-hover:scale-105"
-            loading="lazy"
-          />
+          <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-neutral-500">
-            Sin imagen
+          <div className="flex h-full items-center justify-center text-3xl font-black text-neutral-300">
+            {item.title[0]}
           </div>
         )}
-        <span
-          className={`absolute left-1.5 top-1.5 rounded px-1.5 py-0.5 text-[11px] font-medium ${KIND_COLOR[item.kind]}`}
-        >
+        <span className="absolute left-1.5 top-1.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-semibold text-white">
           {KIND_LABEL[item.kind]}
         </span>
         {item.score !== null && (
-          <span className="absolute right-1.5 top-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[11px] font-medium text-yellow-300">
-            ★ {item.score.toFixed(1)}
+          <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-neutral-900 text-[11px] font-bold text-white">
+            {item.score.toFixed(0)}
           </span>
         )}
       </div>
       <div className="flex flex-1 flex-col gap-1 p-2.5">
-        <p className="line-clamp-2 text-sm font-medium text-neutral-100">{item.title}</p>
-        <p className="text-xs text-neutral-500">{item.year ?? 'Año desconocido'}</p>
+        <p className="line-clamp-2 text-sm font-semibold text-neutral-900">{item.title}</p>
+        <p className="text-xs text-neutral-400">{item.year ?? 'Año desconocido'}</p>
       </div>
-    </Link>
+    </button>
   )
 }

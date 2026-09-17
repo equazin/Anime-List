@@ -66,12 +66,3 @@ export async function trendingMovies(): Promise<SearchResult[]> {
   const json = await tmdbFetch('/trending/movie/week')
   return (json.results as TmdbItem[]).map((r) => toResult(r, 'movie'))
 }
-
-export async function getMovieOrTvById(
-  kind: 'movie' | 'tv',
-  id: string
-): Promise<SearchResult> {
-  const path = kind === 'movie' ? `/movie/${id}` : `/tv/${id}`
-  const json = await tmdbFetch(path)
-  return toResult(json as TmdbItem, kind)
-}

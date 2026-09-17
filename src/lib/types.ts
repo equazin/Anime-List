@@ -23,6 +23,14 @@ export const STATUS_ORDER: WatchStatus[] = [
   'dropped',
 ]
 
+export const STATUS_COLOR: Record<WatchStatus, string> = {
+  watching: '#2F6FED',
+  planned: '#F5A623',
+  completed: '#1FAA59',
+  on_hold: '#9B59B6',
+  dropped: '#E14F4F',
+}
+
 export interface SearchResult {
   kind: MediaKind
   externalId: string

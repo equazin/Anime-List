@@ -6,6 +6,13 @@ import type { MediaKind, SearchResult } from '../lib/types'
 
 type Filter = 'all' | MediaKind
 
+const FILTER_LABEL: Record<Filter, string> = {
+  all: 'Todo',
+  anime: 'Anime',
+  movie: 'Películas',
+  tv: 'Series',
+}
+
 export function Search() {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
@@ -41,46 +48,52 @@ export function Search() {
 
   return (
     <div className="flex flex-col gap-5">
-      <form onSubmit={runSearch} className="flex gap-2">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar anime, película o serie…"
-          className="flex-1 rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 focus:border-fuchsia-500 focus:outline-none"
-        />
+      <form onSubmit={runSearch} className="flex gap-2.5">
+        <div className="flex flex-1 items-center gap-2.5 border border-neutral-200 bg-white px-4">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A8A85" strokeWidth="2">
+            <circle cx="11" cy="11" r="7" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar anime, película o serie…"
+            className="h-[52px] flex-1 bg-transparent text-[15px] text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+          />
+        </div>
         <button
           type="submit"
-          className="rounded-md bg-fuchsia-600 px-4 py-2 text-sm font-medium text-white hover:bg-fuchsia-500"
+          className="h-[52px] bg-neutral-900 px-7 text-sm font-bold text-white hover:bg-neutral-800"
         >
           Buscar
         </button>
       </form>
 
       {!hasTmdbKey() && (
-        <p className="rounded-md bg-amber-500/10 p-3 text-sm text-amber-300">
+        <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-700">
           Sin <code>VITE_TMDB_API_KEY</code> configurada: solo se buscará en la base de
           MyAnimeList.
         </p>
       )}
 
-      <div className="flex gap-2 text-sm">
+      <div className="flex gap-2">
         {(['all', 'anime', 'movie', 'tv'] as Filter[]).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`rounded-full px-3 py-1 transition ${
+            className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition ${
               filter === f
-                ? 'bg-fuchsia-500/20 text-fuchsia-300'
-                : 'bg-neutral-900 text-neutral-400 hover:text-neutral-100'
+                ? 'bg-neutral-900 text-white'
+                : 'bg-neutral-100 text-neutral-500 hover:text-neutral-800'
             }`}
           >
-            {f === 'all' ? 'Todo' : f === 'anime' ? 'Anime' : f === 'movie' ? 'Películas' : 'Series'}
+            {FILTER_LABEL[f]}
           </button>
         ))}
       </div>
 
-      {loading && <p className="text-sm text-neutral-500">Buscando…</p>}
-      {error && !loading && <p className="text-sm text-neutral-500">{error}</p>}
+      {loading && <p className="text-sm text-neutral-400">Buscando…</p>}
+      {error && !loading && <p className="text-sm text-neutral-400">{error}</p>}
 
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
         {filtered.map((item) => (
