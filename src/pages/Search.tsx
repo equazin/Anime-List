@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { browseAnime, searchAnime } from '../lib/jikan'
+import { browseAnime, searchAnime } from '../lib/anilist'
 import { browseMovies, browseTv, searchMovies, searchTv, hasTmdbKey } from '../lib/tmdb'
 import { MediaCard } from '../components/MediaCard'
 import type { MediaKind, SearchResult } from '../lib/types'
@@ -27,8 +27,8 @@ export function Search() {
   }, [])
 
   function describeFailure(animeFailed: boolean, otherFailed: boolean): string | null {
-    if (animeFailed && otherFailed) return 'MyAnimeList y TMDB no están respondiendo ahora mismo.'
-    if (animeFailed) return 'MyAnimeList (Jikan) no está respondiendo ahora mismo — puede ser una caída temporal del servicio.'
+    if (animeFailed && otherFailed) return 'AniList y TMDB no están respondiendo ahora mismo.'
+    if (animeFailed) return 'AniList no está respondiendo ahora mismo — puede ser una caída temporal del servicio.'
     if (otherFailed) return 'TMDB no está respondiendo ahora mismo.'
     return null
   }
@@ -121,7 +121,7 @@ export function Search() {
       {!hasTmdbKey() && (
         <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-700">
           Sin <code>VITE_TMDB_API_KEY</code> configurada: solo se muestran datos de
-          MyAnimeList.
+          AniList.
         </p>
       )}
 

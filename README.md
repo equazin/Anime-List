@@ -7,8 +7,8 @@ información (títulos, imágenes, sinopsis, episodios) viene de APIs públicas.
 
 ## Fuentes de datos
 
-- **Anime**: [Jikan API](https://docs.api.jikan.moe/) — API no oficial de
-  MyAnimeList, gratuita y sin API key.
+- **Anime**: [AniList](https://anilist.co/graphql) — base de datos propia
+  (no depende de scrapear MyAnimeList en vivo), gratuita y sin API key.
 - **Películas y series**: [TMDB](https://www.themoviedb.org/documentation/api)
   — requiere una API key gratuita.
 
@@ -24,8 +24,8 @@ npm run dev
 ```
 
 Sin la key de TMDB la app funciona igual, pero solo con datos de anime
-(Jikan/MyAnimeList); la sección de películas/series queda deshabilitada
-hasta que la configures.
+(AniList); la sección de películas/series queda deshabilitada hasta que
+la configures.
 
 Consigue tu API key gratis en
 https://www.themoviedb.org/settings/api (requiere crear una cuenta).

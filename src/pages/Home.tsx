@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { topAnime } from '../lib/jikan'
+import { topAnime } from '../lib/anilist'
 import { trendingMovies, hasTmdbKey } from '../lib/tmdb'
 import { MediaCard } from '../components/MediaCard'
 import { STATUS_COLOR, STATUS_LABEL, STATUS_ORDER, type SearchResult } from '../lib/types'
@@ -61,13 +61,13 @@ export function Home() {
       <section>
         <div className="mb-3 flex items-baseline justify-between">
           <span className="text-[15px] font-bold text-neutral-900">En emisión ahora</span>
-          <span className="text-xs text-neutral-400">MyAnimeList · Jikan</span>
+          <span className="text-xs text-neutral-400">AniList</span>
         </div>
         {loading ? (
           <p className="text-sm text-neutral-400">Cargando…</p>
         ) : animeError ? (
           <div className="flex items-center justify-between gap-3 rounded-md bg-red-50 p-3 text-sm text-red-700">
-            <span>MyAnimeList (Jikan) no está respondiendo ahora mismo.</span>
+            <span>AniList no está respondiendo ahora mismo.</span>
             <button
               onClick={load}
               className="flex-shrink-0 rounded-md bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700"
