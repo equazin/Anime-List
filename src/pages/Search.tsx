@@ -5,6 +5,7 @@ import { MediaCard } from '../components/MediaCard'
 import type { MediaKind, SearchResult } from '../lib/types'
 
 type Filter = 'all' | MediaKind
+type Mode = 'browse' | 'search'
 
 const FILTER_LABEL: Record<Filter, string> = {
   all: 'Todo',
@@ -13,17 +14,27 @@ const FILTER_LABEL: Record<Filter, string> = {
   tv: 'Series',
 }
 
+interface PageState {
+  page: number
+  hasNextPage: boolean
+}
+
 export function Search() {
   const [query, setQuery] = useState('')
+  const [activeQuery, setActiveQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [genre, setGenre] = useState<string | null>(null)
   const [results, setResults] = useState<SearchResult[]>([])
-  const [mode, setMode] = useState<'browse' | 'search'>('browse')
+  const [mode, setMode] = useState<Mode>('browse')
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [anime, setAnimeState] = useState<PageState>({ page: 1, hasNextPage: false })
+  const [movie, setMovieState] = useState<PageState>({ page: 1, hasNextPage: false })
+  const [tv, setTvState] = useState<PageState>({ page: 1, hasNextPage: false })
 
   useEffect(() => {
-    loadBrowse()
+    load('browse', '', 1, false)
   }, [])
 
   function describeFailure(animeFailed: boolean, otherFailed: boolean): string | null {
@@ -33,23 +44,49 @@ export function Search() {
     return null
   }
 
-  async function loadBrowse() {
-    setMode('browse')
-    setLoading(true)
+  async function load(nextMode: Mode, q: string, page: number, append: boolean) {
+    if (append) setLoadingMore(true)
+    else setLoading(true)
     setError(null)
-    const [animeRes, movieRes, tvRes] = await Promise.allSettled([
-      browseAnime(),
-      browseMovies(),
-      browseTv(),
-    ])
+
+    const fetchAnime = nextMode === 'search' ? searchAnime(q, page) : browseAnime(page)
+    const fetchMovies = nextMode === 'search' ? searchMovies(q, page) : browseMovies(page)
+    const fetchTv = nextMode === 'search' ? searchTv(q, page) : browseTv(page)
+
+    const [animeRes, movieRes, tvRes] = await Promise.allSettled([fetchAnime, fetchMovies, fetchTv])
+
     const combined: SearchResult[] = []
-    if (animeRes.status === 'fulfilled') combined.push(...animeRes.value)
-    if (movieRes.status === 'fulfilled') combined.push(...movieRes.value)
-    if (tvRes.status === 'fulfilled') combined.push(...tvRes.value)
-    setResults(combined)
+    if (animeRes.status === 'fulfilled') {
+      combined.push(...animeRes.value.items)
+      setAnimeState({ page, hasNextPage: animeRes.value.hasNextPage })
+    }
+    if (movieRes.status === 'fulfilled') {
+      combined.push(...movieRes.value.items)
+      setMovieState({ page, hasNextPage: movieRes.value.hasNextPage })
+    }
+    if (tvRes.status === 'fulfilled') {
+      combined.push(...tvRes.value.items)
+      setTvState({ page, hasNextPage: tvRes.value.hasNextPage })
+    }
+
+    setResults((prev) => (append ? [...prev, ...combined] : combined))
     setGenre(null)
-    setError(describeFailure(animeRes.status === 'rejected', movieRes.status === 'rejected' || tvRes.status === 'rejected'))
+
+    const failureMessage = describeFailure(
+      animeRes.status === 'rejected',
+      movieRes.status === 'rejected' || tvRes.status === 'rejected'
+    )
+    if (failureMessage) setError(failureMessage)
+    else if (!append && combined.length === 0) setError('Sin resultados.')
+
+    setMode(nextMode)
     setLoading(false)
+    setLoadingMore(false)
+  }
+
+  function loadBrowse() {
+    setActiveQuery('')
+    load('browse', '', 1, false)
   }
 
   function runSearch(e: React.FormEvent) {
@@ -57,33 +94,21 @@ export function Search() {
     performSearch()
   }
 
-  async function performSearch() {
+  function performSearch() {
     if (!query.trim()) {
       loadBrowse()
       return
     }
-    setMode('search')
-    setLoading(true)
-    setError(null)
-    const [animeRes, movieRes, tvRes] = await Promise.allSettled([
-      searchAnime(query),
-      searchMovies(query),
-      searchTv(query),
-    ])
-    const combined: SearchResult[] = []
-    if (animeRes.status === 'fulfilled') combined.push(...animeRes.value)
-    if (movieRes.status === 'fulfilled') combined.push(...movieRes.value)
-    if (tvRes.status === 'fulfilled') combined.push(...tvRes.value)
-    setResults(combined)
-    setGenre(null)
-    const failureMessage = describeFailure(
-      animeRes.status === 'rejected',
-      movieRes.status === 'rejected' || tvRes.status === 'rejected'
-    )
-    if (failureMessage) setError(failureMessage)
-    else if (combined.length === 0) setError('Sin resultados.')
-    setLoading(false)
+    setActiveQuery(query)
+    load('search', query, 1, false)
   }
+
+  function loadMore() {
+    const nextPage = Math.max(anime.page, movie.page, tv.page) + 1
+    load(mode, activeQuery, nextPage, true)
+  }
+
+  const hasMore = anime.hasNextPage || movie.hasNextPage || tv.hasNextPage
 
   const byKind = filter === 'all' ? results : results.filter((r) => r.kind === filter)
 
@@ -191,6 +216,16 @@ export function Search() {
           <MediaCard key={`${item.kind}-${item.externalId}`} item={item} />
         ))}
       </div>
+
+      {!loading && !error && hasMore && !genre && (
+        <button
+          onClick={loadMore}
+          disabled={loadingMore}
+          className="self-center rounded-full bg-neutral-100 px-6 py-2.5 text-sm font-semibold text-neutral-700 hover:bg-neutral-200 disabled:opacity-50"
+        >
+          {loadingMore ? 'Cargando…' : 'Cargar más'}
+        </button>
+      )}
     </div>
   )
 }

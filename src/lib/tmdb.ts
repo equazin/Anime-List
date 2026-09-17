@@ -3,6 +3,11 @@ import type { MediaKind, SearchResult } from './types'
 const BASE = 'https://api.themoviedb.org/3'
 const IMG_BASE = 'https://image.tmdb.org/t/p/w342'
 
+export interface PagedResult {
+  items: SearchResult[]
+  hasNextPage: boolean
+}
+
 function apiKey(): string | null {
   const key = import.meta.env.VITE_TMDB_API_KEY
   return key && key.trim() ? key.trim() : null
@@ -39,6 +44,12 @@ interface TmdbItem {
   genre_ids?: number[]
 }
 
+interface TmdbListResponse {
+  results: TmdbItem[]
+  page: number
+  total_pages: number
+}
+
 function toResult(item: TmdbItem, kind: MediaKind): SearchResult {
   const date = item.release_date ?? item.first_air_date ?? ''
   const genreMap = kind === 'movie' ? MOVIE_GENRES : TV_GENRES
@@ -55,12 +66,20 @@ function toResult(item: TmdbItem, kind: MediaKind): SearchResult {
   }
 }
 
-async function tmdbFetch(path: string, retries = 2) {
+function toPaged(json: TmdbListResponse, kind: MediaKind): PagedResult {
+  return {
+    items: json.results.map((r) => toResult(r, kind)),
+    hasNextPage: json.page < json.total_pages,
+  }
+}
+
+async function tmdbFetch(path: string, params: Record<string, string> = {}, retries = 2): Promise<TmdbListResponse> {
   const key = apiKey()
   if (!key) throw new Error('Falta VITE_TMDB_API_KEY')
   const url = new URL(`${BASE}${path}`)
   url.searchParams.set('api_key', key)
   url.searchParams.set('language', 'es-ES')
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v)
 
   let lastError: unknown
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -83,32 +102,32 @@ async function tmdbFetch(path: string, retries = 2) {
   throw lastError instanceof Error ? lastError : new Error('TMDB no responde')
 }
 
-export async function searchMovies(query: string): Promise<SearchResult[]> {
-  if (!query.trim() || !hasTmdbKey()) return []
-  const json = await tmdbFetch(`/search/movie?query=${encodeURIComponent(query)}`)
-  return (json.results as TmdbItem[]).map((r) => toResult(r, 'movie'))
+export async function searchMovies(query: string, page = 1): Promise<PagedResult> {
+  if (!query.trim() || !hasTmdbKey()) return { items: [], hasNextPage: false }
+  const json = await tmdbFetch('/search/movie', { query, page: String(page) })
+  return toPaged(json, 'movie')
 }
 
-export async function searchTv(query: string): Promise<SearchResult[]> {
-  if (!query.trim() || !hasTmdbKey()) return []
-  const json = await tmdbFetch(`/search/tv?query=${encodeURIComponent(query)}`)
-  return (json.results as TmdbItem[]).map((r) => toResult(r, 'tv'))
+export async function searchTv(query: string, page = 1): Promise<PagedResult> {
+  if (!query.trim() || !hasTmdbKey()) return { items: [], hasNextPage: false }
+  const json = await tmdbFetch('/search/tv', { query, page: String(page) })
+  return toPaged(json, 'tv')
 }
 
 export async function trendingMovies(): Promise<SearchResult[]> {
   if (!hasTmdbKey()) return []
   const json = await tmdbFetch('/trending/movie/week')
-  return (json.results as TmdbItem[]).map((r) => toResult(r, 'movie'))
+  return json.results.map((r) => toResult(r, 'movie'))
 }
 
-export async function browseMovies(): Promise<SearchResult[]> {
-  if (!hasTmdbKey()) return []
-  const json = await tmdbFetch('/movie/popular')
-  return (json.results as TmdbItem[]).map((r) => toResult(r, 'movie'))
+export async function browseMovies(page = 1): Promise<PagedResult> {
+  if (!hasTmdbKey()) return { items: [], hasNextPage: false }
+  const json = await tmdbFetch('/movie/popular', { page: String(page) })
+  return toPaged(json, 'movie')
 }
 
-export async function browseTv(): Promise<SearchResult[]> {
-  if (!hasTmdbKey()) return []
-  const json = await tmdbFetch('/tv/popular')
-  return (json.results as TmdbItem[]).map((r) => toResult(r, 'tv'))
+export async function browseTv(page = 1): Promise<PagedResult> {
+  if (!hasTmdbKey()) return { items: [], hasNextPage: false }
+  const json = await tmdbFetch('/tv/popular', { page: String(page) })
+  return toPaged(json, 'tv')
 }

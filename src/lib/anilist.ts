@@ -13,6 +13,11 @@ interface AniListMedia {
   description: string | null
 }
 
+export interface PagedResult {
+  items: SearchResult[]
+  hasNextPage: boolean
+}
+
 function stripHtml(html: string | null): string {
   if (!html) return ''
   return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -71,17 +76,25 @@ const MEDIA_FIELDS = `
   description
 `
 
-export async function searchAnime(query: string): Promise<SearchResult[]> {
-  if (!query.trim()) return []
+function toPaged(json: { data: { Page: { pageInfo: { hasNextPage: boolean }; media: AniListMedia[] } } }): PagedResult {
+  return {
+    items: json.data.Page.media.map(toResult),
+    hasNextPage: json.data.Page.pageInfo.hasNextPage,
+  }
+}
+
+export async function searchAnime(query: string, page = 1): Promise<PagedResult> {
+  if (!query.trim()) return { items: [], hasNextPage: false }
   const gql = `
-    query ($search: String, $perPage: Int) {
-      Page(page: 1, perPage: $perPage) {
+    query ($search: String, $page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        pageInfo { hasNextPage }
         media(search: $search, type: ANIME, sort: SEARCH_MATCH) { ${MEDIA_FIELDS} }
       }
     }
   `
-  const json = await anilistFetch(gql, { search: query, perPage: 24 })
-  return (json.data.Page.media as AniListMedia[]).map(toResult)
+  const json = await anilistFetch(gql, { search: query, page, perPage: 24 })
+  return toPaged(json)
 }
 
 export async function topAnime(): Promise<SearchResult[]> {
@@ -96,14 +109,15 @@ export async function topAnime(): Promise<SearchResult[]> {
   return (json.data.Page.media as AniListMedia[]).map(toResult)
 }
 
-export async function browseAnime(): Promise<SearchResult[]> {
+export async function browseAnime(page = 1): Promise<PagedResult> {
   const gql = `
-    query ($perPage: Int) {
-      Page(page: 1, perPage: $perPage) {
+    query ($page: Int, $perPage: Int) {
+      Page(page: $page, perPage: $perPage) {
+        pageInfo { hasNextPage }
         media(type: ANIME, sort: SCORE_DESC) { ${MEDIA_FIELDS} }
       }
     }
   `
-  const json = await anilistFetch(gql, { perPage: 24 })
-  return (json.data.Page.media as AniListMedia[]).map(toResult)
+  const json = await anilistFetch(gql, { page, perPage: 24 })
+  return toPaged(json)
 }
